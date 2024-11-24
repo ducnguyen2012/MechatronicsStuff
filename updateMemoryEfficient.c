@@ -43,11 +43,13 @@ void quaycbsangphai();
 void quaycbsangtrai();
 void tiepcan(double PID);
 double tinhpid();
-#define MAX_DISTANCE 50    // Maximum distance from the obstacle
-#define MAX_SPEED 30        // Maximum car speed
-#define GAMMA 0.6           // Discount factor
-#define THRESHOLD 1e-4      // Convergence threshold
 
+
+#define MAX_DISTANCE 100    // Maximum distance from the obstacle
+#define MAX_SPEED 100       // Maximum car speed
+#define GAMMA 0.6           // Discount factor
+
+// Reward function
 double reward(int distance, int speed) {
     if (distance < 25) return -100; // Collision penalty
     if (distance == 25) return 100; // Terminal reward
@@ -67,8 +69,8 @@ void next_state(int distance, int speed, const char* action, int* new_distance, 
     if (strcmp(action, "slow_down") == 0) new_speed_temp = fmax(0, speed - 1);
     else if (strcmp(action, "speed_up") == 0) new_speed_temp = fmin(MAX_SPEED, speed + 1);
 
-    *new_distance = fmax(0, distance - new_speed_temp);
-    *new_speed = new_speed_temp;
+    *new_distance = fmax(0, distance - new_speed_temp); // New distance depends on speed
+    *new_speed = new_speed_temp; // Update speed
 }
 
 // Compute value for a single state
@@ -82,12 +84,13 @@ double compute_value(int distance, int speed, const char* actions[], int action_
     }
     return max_value;
 }
+
 int computeAction(int distance) {
     const char* actions[] = {"slow_down", "maintain_speed", "speed_up"};
 
-    // Iterate over all possible distances
-    //for (int distance = 50; distance >= 0; distance--) {
-        //printf("Current distance: %d\n", distance);
+    // Simulate distance from 100 to 25
+    
+        printf("Current distance: %d\n", distance);
 
         double best_value = -1e9;
         int best_speed = 0;
@@ -102,10 +105,10 @@ int computeAction(int distance) {
         }
 
         // Print results for the current distance
-        //printf("Distance: %d, Optimal Speed: %d, Value: %.2f\n", distance, best_speed, best_value);
-    //}
+        printf("Distance: %d, Optimal Speed: %d, Value: %.2f\n", distance, best_speed, best_value);
+    
 
-    return best_speed;
+        return distance;
 }
 void setup() {
   // put your setup code here, to run once:
