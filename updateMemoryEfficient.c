@@ -48,13 +48,17 @@ double tinhpid();
 #define GAMMA 0.6           // Discount factor
 #define THRESHOLD 1e-4      // Convergence threshold
 
-// Reward function
 double reward(int distance, int speed) {
     if (distance < 25) return -100; // Collision penalty
     if (distance == 25) return 100; // Terminal reward
-    if (speed > distance) return -10; // Speeding penalty
+
+    // Linear mapping of distance to optimal speed
+    int optimal_speed = fmax(20, 80 - (80 - 20) * (100 - distance) / 75);
     
-    return 10.0 - fabs(distance - 5) - speed * 0.5; 
+    // Penalize deviation from optimal speed
+    double speed_penalty = fabs(speed - optimal_speed) * 2.0; // Higher penalty for large deviations
+
+    return 50.0 - speed_penalty; // Reward is higher when speed is closer to the optimal value
 }
 
 // Transition function
