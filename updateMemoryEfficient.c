@@ -1,110 +1,26 @@
 #include <Servo.h>
-Servo myservo;  // create servo object to control a servo
-int pos = 0;    // variable to store the servo position
-
-
-// duc code start
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
-#define MAX_DISTANCE 12   // Maximum distance from the obstacle
-#define MAX_SPEED 12        // Maximum car speed
-#define GAMMA 0.4          // Discount factor
-#define THRESHOLD 1e-4     // Convergence threshold
-
-// Reward function
-double reward(int distance, int speed) {
-    if (distance < 3) return -100; // Collision penalty
-    if (distance == 3) return 100;
-    if (speed > distance) return -10;    // Speeding penalty
-    return 10 - speed * 0.5;             // Safe speed reward
-}
-
-// Transition function
-void next_state(int distance, int speed, const char* action, int* new_distance, int* new_speed) {
-    int new_speed_temp = speed;
-    if (strcmp(action, "slow_down") == 0) new_speed_temp = fmax(0, speed - 1);
-    else if (strcmp(action, "speed_up") == 0) new_speed_temp = fmin(MAX_SPEED, speed + 1);
-
-    *new_distance = fmax(0, distance - new_speed_temp);
-    *new_speed = new_speed_temp;
-}
-
-// Value iteration
-void value_iteration(const char* actions[], int action_count, double V[MAX_DISTANCE + 1][MAX_SPEED + 1]) {
-    while (1) {
-        double delta = 0.0; // Track max change in value
-        double new_V[MAX_DISTANCE + 1][MAX_SPEED + 1] = {0}; // New value table
-
-        for (int distance = 0; distance <= MAX_DISTANCE; ++distance) {
-            for (int speed = 0; speed <= MAX_SPEED; ++speed) {
-                if (distance == 0) continue; // Skip terminal state
-
-                double max_value = -1e9; // Initialize with a large negative value
-                for (int i = 0; i < action_count; ++i) {
-                    int next_distance, next_speed;
-                    next_state(distance, speed, actions[i], &next_distance, &next_speed);
-                    double value = reward(distance, speed) + GAMMA * V[next_distance][next_speed];
-                    max_value = fmax(max_value, value);
-                }
-
-                new_V[distance][speed] = max_value;
-                delta = fmax(delta, fabs(new_V[distance][speed] - V[distance][speed]));
-            }
-        }
-
-        memcpy(V, new_V, sizeof(new_V));
-        if (delta < THRESHOLD) break; // Stop if converged
-    }
-}
-
-int computeAction(int distance) {
-    const char* actions[] = {"slow_down", "maintain_speed", "speed_up"};
-    double V[MAX_DISTANCE + 1][MAX_SPEED + 1] = {0}; // Value table
-    Serial.print("compute action!");
-    value_iteration(actions, 3, V);
-
-    // Print results
-    int res = -9999;
-    int finalSpeed = -9999;
-    //int finalDistance = -9999;
-    // int distance;
-    // printf("Enter your current speed: ");
-    // scanf("%d", &distance);
-    for (int speed = 0; speed <= MAX_SPEED; ++speed) {
-        if (res < V[distance][speed]) {
-            res = V[distance][speed];
-            //finalDistance = distance;
-            finalSpeed = speed;
-        }
-    }
-    //printf("final: %d and speed: %d\n", finalDistance, finalSpeed);
-
-    return finalSpeed;
-}
+Servo myservo;  // create servo object to control a servo
+int pos = 0;    // variable to store the servo position
 
 
-
-
-
-// duc code end
-
-const int trig = 6;  //doi tu 6 thanh 3
+const int trig = 3;  //doi tu 6 thanh 3
 const int echo = 4;//5    
 int tien1 = 10;       
 int tien2 = 11;        
 int lui1 = 12;        
 int lui2 = 13;     
-int enA = 3; //doi tu 3 thanh 6
+int enA = 6; //doi tu 3 thanh 6
 int enB = 5;   
 int dongcoservo = 9;   
 
 
 double e, P, I, D, PID;
 double pe = 0;
-double Kp = 1.0;
+double Kp = 1;
 //int Ki = 1/2;
 //int Kd = 1/2;
 int v_moi;
@@ -127,7 +43,66 @@ void quaycbsangphai();
 void quaycbsangtrai();
 void tiepcan(double PID);
 double tinhpid();
+#define MAX_DISTANCE 50    // Maximum distance from the obstacle
+#define MAX_SPEED 30        // Maximum car speed
+#define GAMMA 0.6           // Discount factor
+#define THRESHOLD 1e-4      // Convergence threshold
 
+// Reward function
+double reward(int distance, int speed) {
+    if (distance < 25) return -100; // Collision penalty
+    if (distance == 25) return 100; // Terminal reward
+    if (speed > distance) return -10; // Speeding penalty
+    
+    return 10.0 - fabs(distance - 5) - speed * 0.5; 
+}
+
+// Transition function
+void next_state(int distance, int speed, const char* action, int* new_distance, int* new_speed) {
+    int new_speed_temp = speed;
+    if (strcmp(action, "slow_down") == 0) new_speed_temp = fmax(0, speed - 1);
+    else if (strcmp(action, "speed_up") == 0) new_speed_temp = fmin(MAX_SPEED, speed + 1);
+
+    *new_distance = fmax(0, distance - new_speed_temp);
+    *new_speed = new_speed_temp;
+}
+
+// Compute value for a single state
+double compute_value(int distance, int speed, const char* actions[], int action_count) {
+    double max_value = -1e9; // Initialize with a large negative value
+    for (int i = 0; i < action_count; ++i) {
+        int next_distance, next_speed;
+        next_state(distance, speed, actions[i], &next_distance, &next_speed);
+        double value = reward(next_distance, next_speed) + GAMMA * reward(next_distance, next_speed); // Approximating next state's value
+        max_value = fmax(max_value, value);
+    }
+    return max_value;
+}
+int computeAction(int distance) {
+    const char* actions[] = {"slow_down", "maintain_speed", "speed_up"};
+
+    // Iterate over all possible distances
+    //for (int distance = 50; distance >= 0; distance--) {
+        //printf("Current distance: %d\n", distance);
+
+        double best_value = -1e9;
+        int best_speed = 0;
+
+        // Test all speeds for the current distance
+        for (int speed = 0; speed <= MAX_SPEED; ++speed) {
+            double value = compute_value(distance, speed, actions, 3);
+            if (value > best_value) {
+                best_value = value;
+                best_speed = speed;
+            }
+        }
+
+        // Print results for the current distance
+        //printf("Distance: %d, Optimal Speed: %d, Value: %.2f\n", distance, best_speed, best_value);
+    //}
+
+    return best_speed;
+}
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
@@ -160,33 +135,41 @@ void loop()
   Serial.print("THis is khoang cach: ");
   Serial.print(khoangcach);
   Serial.print("\n");
-  if (khoangcach <= 10){
-      Serial.print("khoang cach in 40");
-      Serial.print("\n");
-      int action = computeAction(khoangcach);
+  /*
+  if (khoangcach <= 30){
+      //int action = computeAction(khoangcach);
       Serial.print("THis is curr action: ");
       Serial.print(action);
       Serial.print("\n");
     }
+    */
   if (khoangcach > gioihan || khoangcach == 0)
   {
       dithang();
   }
   
-  else if (khoangcach < gioihan && khoangcach>6)
+  else if (khoangcach < gioihan && khoangcach>25)
   {
     
-      //PID = tinhpid();
-      //tiepcan(PID);
+      PID = tinhpid();
+      tiepcan(PID);
   }
   else
   {
     resetdongco();
     quaycbsangtrai();
+    delay(100);
     dokhoangcach();
+    Serial.print("THis is khoang cach: ");
+    Serial.print(khoangcach);
+    Serial.print("\n");
     khoangcachtrai = khoangcach;
     quaycbsangphai();
+    delay(100);
     dokhoangcach();
+    Serial.print("THis is khoang cach: ");
+  Serial.print(khoangcach);
+  Serial.print("\n");
     khoangcachphai = khoangcach;
     if (khoangcachphai < 30 && khoangcachtrai < 30) {
       dilui();
@@ -214,8 +197,8 @@ void dithang()
   digitalWrite(tien2, HIGH);
   digitalWrite(lui1, LOW);
   digitalWrite(lui2, LOW);
-  analogWrite(enA, 100);
-  analogWrite(enB, 100);
+  analogWrite(enA, 52);
+  analogWrite(enB, 50);
 /**
   for (int k = 0; k <256; k++)
   {
@@ -232,8 +215,8 @@ void disangphai()
   digitalWrite(lui1, HIGH);
   delay(1000);//thời gian lùi
   digitalWrite(lui1, LOW);
-  analogWrite(enA, 100);
-  analogWrite(enB, 100);
+  analogWrite(enA, 50);
+  analogWrite(enB, 50);
 
 }
 void disangtrai()
@@ -322,7 +305,7 @@ void tiepcan(double PID)
   digitalWrite(tien2, HIGH);
   digitalWrite(lui1, LOW);
   digitalWrite(lui2, LOW);
-  v_moi =  v_hientai - PID;
+  v_moi = PID;
   v_hientai = v_moi;
   analogWrite(enA, v_hientai);
   analogWrite(enB, v_hientai);
