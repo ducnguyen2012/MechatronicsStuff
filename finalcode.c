@@ -53,6 +53,11 @@ double reward(int distance, int speed) {
     if (distance == 25) return 100; // Terminal reward
 
     // Linear mapping of distance to optimal speed
+    //#! tìm ra tốc độ tối ưu: vì trong khi điều khiển động cơ, xung bé nhất mà động cơ có thể nhận (mà vẫn tiếp tục đi là 20).
+    //#! lý do tại sao lại có biểu thức là: 80 - (80 - 20) * (100 - distance) / 75 ?
+    //#! qua nhiều lân thử và tối ưu, nhóm nhận ra khi đi từ 100 tới 25 để đo thì tốc độ tối ưu sẽ được lấy trong khoảng
+    // #! từ 25 - 80. Với biểu thức trên, khoảng cách xa -> (100 - distance) / 75 nhỏ -> 80 - (80-20)*nhỏ sẽ ra được vận tốc lớn
+    // và cứ thế giảm dần. Việc thiết kế phần thưởng thế này nhằm mục đích khiến vận tốc giảm dần
     int optimal_speed = fmax(20, 80 - (80 - 20) * (100 - distance) / 75);
     
     // Penalize deviation from optimal speed
