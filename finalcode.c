@@ -68,10 +68,16 @@ double reward(int distance, int speed) {
 
 // Transition function
 void next_state(int distance, int speed, const char* action, int* new_distance, int* new_speed) {
+    #! hàm này sinh ra để update distance và speed!
+
+
+    #! chỉ có 2 hành động là chậm hoặc nhanh. Nếu như chọn slow, thì speed sẽ đi chậm lại (nhưng chậm nhất là 0, không phải âm)
+    #! nếu như hành động là nhanh, speed sẽ tăng lên 1 (nhưng không vượt quá max speed)
     int new_speed_temp = speed;
     if (strcmp(action, "slow_down") == 0) new_speed_temp = fmax(0, speed - 1);
     else if (strcmp(action, "speed_up") == 0) new_speed_temp = fmin(MAX_SPEED, speed + 1);
 
+    
     *new_distance = fmax(0, distance - new_speed_temp); // New distance depends on speed
     *new_speed = new_speed_temp; // Update speed
 }
@@ -81,9 +87,9 @@ double compute_value(int distance, int speed, const char* actions[], int action_
     double max_value = -1e9; // Initialize with a large negative value
     for (int i = 0; i < action_count; ++i) {
         int next_distance, next_speed;
-        next_state(distance, speed, actions[i], &next_distance, &next_speed);
+        next_state(distance, speed, actions[i], &next_distance, &next_speed); // tìm ra distance mới và speed mới dựa trên state tiếp theo
         double value = reward(next_distance, next_speed) + GAMMA * reward(next_distance, next_speed); // Approximating next state's value
-        max_value = fmax(max_value, value);
+        max_value = fmax(max_value, value); // bellman optimal solution!
     }
     return max_value;
 }
@@ -100,11 +106,8 @@ int computeAction(int distance) {
 
         // Test all speeds for the current distance
         for (int speed = 0; speed <= MAX_SPEED; ++speed) {
-            double value = compute_value(distance, speed, actions, 3);
-            // if (value > best_value) {
-            //     best_value = value;
-            //     best_speed = speed;
-            // }
+            double value = compute_value(distance, speed, actions, 3); 
+            //#! tìm ra vận tốc tối ưu nhất
             best_speed = fmax(speed, best_speed);
         }
 
