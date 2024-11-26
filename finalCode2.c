@@ -47,18 +47,15 @@ double tinhpid();
 #define MAX_SPEED 100       // Maximum car speed
 #define GAMMA 0.6           // Discount factor
 
-// Reward function
+
 double reward(int distance, int speed) {
-    if (distance < 25) return -100; // Collision penalty
+    if (distance < 25) return -100; 
     if (distance == 25) return 100; // Terminal reward
 
     // Linear mapping of distance to optimal speed
     int optimal_speed = fmax(20, 80 - (80 - 20) * (100 - distance) / 75);
     
     // // Penalize deviation from optimal speed
-    // double speed_penalty = fabs(speed - optimal_speed) * 2.0; // Higher penalty for large deviations
-
-    // return 50.0 - speed_penalty; // Reward is higher when speed is closer to the optimal value
     double speed_penalty = fabs(speed - optimal_speed) * 2.0; // Higher penalty for large deviations
 
     // Penalize high speeds for small distances explicitly
